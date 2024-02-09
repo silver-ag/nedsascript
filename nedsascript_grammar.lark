@@ -1,0 +1,41 @@
+
+%import common.WS
+%ignore WS
+
+NAME : /[a-zA-Z_]+/
+NUMBER : /[0-9]+/
+COMPARISON : "=" | ">" | "<" | ">=" | "<=" | "!="
+OPERATOR : "+" | "-" | "*" | "/"
+DIRECTION: "UP" | "DOWN"
+
+program : codeblock? (labelledcodeblock)* label?
+
+codeblock : _statement+
+
+labelledcodeblock: label _statement*
+
+label : ":" NAME
+
+_statement : _ifstatement | goto | vardeclaration | varassignment | push | move | halt | pass
+
+_ifstatement : ifcomparison | ifread
+ifcomparison : "IF" expression COMPARISON expression "{" codeblock "}"
+ifread : "IF" "READ" NAME "{" codeblock "}"
+
+goto: "GOTO" NAME
+
+vardeclaration : "VAR" NAME "=" number "/" number
+
+varassignment : NAME "=" expression
+
+expression : NAME | number | expression OPERATOR expression | "(" expression ")"
+
+push : "PUSH" NAME
+
+move : "MOVE" DIRECTION
+
+halt: "HALT"
+
+pass: "PASS"
+
+number: NUMBER
