@@ -37,7 +37,7 @@ push : "PUSH" NAME
 
 move : "MOVE" DIRECTION
 
-halt: "HALT"
+halt: "HALT" NAME
 
 pass: "PASS"
 

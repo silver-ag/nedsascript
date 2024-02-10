@@ -9,6 +9,8 @@ def test_grow():
     assertfile('testgrow.nedsa', '+DOESNOTHALT+')
 def test_startendlabel():
     assertfile('teststartendlabel.nedsa', 'SUCCESS')
+def test_move():
+    assertfile('testmove.nedsa', 'SUCCESS')
 
 def assertfile(filename, result):
     with open('tests/' + filename, 'r') as src:

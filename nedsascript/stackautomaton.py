@@ -24,7 +24,11 @@ class TableTransition:
 class NonErasingStackAutomaton:
     # inputless version, because that's all i need
     def __init__(self, transitions):
-        self.transitions = {(transition.state_from, transition.value_from) : transition for transition in transitions}
+        self.transitions = {}
+        for transition in transitions:
+            if (transition.state_from, transition.value_from) in self.transitions:
+                raise(Exception(f"duplicate transition detected from {(transition.state_from, transition.value_from)} to both {transition.state_to} and {self.transitions[(transition.state_from, transition.value_from)].state_to}"))
+            self.transitions[(transition.state_from, transition.value_from)] = transition
         self.states = set()
         self.alphabet = set(['BLANK'])
         for transition in transitions:
@@ -78,7 +82,7 @@ class NonErasingStackAutomaton:
     @property
     def first_transition_table(self):
         return {state: TableTransition(state, '+REJECT:INVALIDMOVE+', halt = True) for state in self.states}
-    def run_with_transition_tables(self, state):
+    def run_with_transition_tables(self, state, verbose = False):
         # guaranteed to halt!! (in exponential time, tbf)
         # see: Nonerasing Stack Automata, J. Hopcroft, J. Ullman, Journal of Computer and Systems Sciences, 1 (1967), pp. 166-186
         # https://www.sciencedirect.com/science/article/pii/S0022000067800138
@@ -94,9 +98,10 @@ class NonErasingStackAutomaton:
         current_transition_table = self.first_transition_table
         all_transition_tables = [(current_transition_table, [])] # have to use an assoc-list because dicts aren't valid dict keys
         while True:
-            #print(all_transition_tables)
             if (state, 'BLANK') in self.transitions:
                 t = self.transitions[(state, 'BLANK')]
+                if verbose:
+                    print(f"{t.state_from} -> {t.state_to}")
             else:
                 # if there's no transition for this situation, halt and return the current state
                 return state

@@ -1,4 +1,6 @@
 :start
+PUSH done
+MOVE DOWN
 IF READ done {
   GOTO SUCCESS
 }

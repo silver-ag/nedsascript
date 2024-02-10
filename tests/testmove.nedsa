@@ -1,0 +1,21 @@
+PUSH bottom
+VAR loopcounter = 0/3
+VAR elementcounter = 0/5
+:pushloop
+PUSH a
+loopcounter = loopcounter + 1
+IF loopcounter < 3 {
+  GOTO pushloop
+}
+:countloop
+MOVE DOWN
+IF READ a {
+  elementcounter = elementcounter + 1
+  GOTO countloop
+}
+IF elementcounter = 3 {
+  GOTO success
+}
+HALT FAILURE
+:success
+HALT SUCCESS
