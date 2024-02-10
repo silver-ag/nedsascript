@@ -1,6 +1,8 @@
 
 %import common.WS
-%ignore WS
+_COMMENT : (/\/\/[^\n]*/)
+WSORCOMMENT : WS | (_COMMENT "\n")
+%ignore WSORCOMMENT
 
 NAME : /[a-zA-Z_]+/
 NUMBER : /[0-9]+/
@@ -8,7 +10,8 @@ COMPARISON : "=" | ">" | "<" | ">=" | "<=" | "!="
 OPERATOR : "+" | "-" | "*" | "/"
 DIRECTION: "UP" | "DOWN"
 
-program : codeblock? (labelledcodeblock)* label?
+// note the explicit option for comments at the end, because lark doesn't support $ in the definition of _COMMENT
+program : codeblock? (labelledcodeblock)* label? _COMMENT*
 
 codeblock : _statement+
 
