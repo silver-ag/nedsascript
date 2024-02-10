@@ -48,11 +48,11 @@ class NonErasingStackAutomaton:
                     pointer += 1
                 else:
                     # pushing while not at the top of the stack is rejecting
-                    return 'reject: push while not at top'
+                    return '+REJECT:INVALIDPUSH+'
             pointer += t.move
             if pointer < 0 or pointer > len(stack):
                 # moving the pointer off the stack is rejecting
-                return 'reject: moved pointer off stack'
+                return '+REJECT:INVALIDMOVE+'
     def make_transition_table(self, prev_transition_table, new_value):
         return {state: self.get_eventual_transition(state, prev_transition_table, new_value) for state in self.states}
     def get_eventual_transition(self, state, prev_transition_table, new_value):
@@ -66,7 +66,7 @@ class NonErasingStackAutomaton:
             state = t.state_to
             if t.push is not None:
                 # pushing while not at the top of the stack is rejecting
-                return TableTransition(original_state, 'reject: push while not at top', halt = True)
+                return TableTransition(original_state, '+REJECT:INVALIDPUSH+', halt = True)
             if t.move == 1:
                 return TableTransition(original_state, state)
             if t.move == -1:
@@ -74,10 +74,10 @@ class NonErasingStackAutomaton:
                     return TableTransition(original_state, prev_transition_table[state].state_to, halt = True)
                 else:
                     state = prev_transition_table[state].state_to
-        return TableTransition(original_state, 'reject: infinite loop', halt = True)
+        return TableTransition(original_state, '+DOESNOTHALT+', halt = True)
     @property
     def first_transition_table(self):
-        return {state: TableTransition(state, 'reject: moved pointer off stack', halt = True) for state in self.states}
+        return {state: TableTransition(state, '+REJECT:INVALIDMOVE+', halt = True) for state in self.states}
     def run_with_transition_tables(self, state):
         # guaranteed to halt!! (in exponential time, tbf)
         # see: Nonerasing Stack Automata, J. Hopcroft, J. Ullman, Journal of Computer and Systems Sciences, 1 (1967), pp. 166-186
@@ -107,7 +107,7 @@ class NonErasingStackAutomaton:
                 if table_index == -1:
                     all_transition_tables.append((current_transition_table, []))
             if t.move == 1:
-                return 'reject: moved pointer off stack'
+                return '+REJECT:INVALIDMOVE+'
             if t.move == -1:
                 if current_transition_table[state].halt:
                    return current_transition_table[state].state_to
@@ -117,7 +117,7 @@ class NonErasingStackAutomaton:
             table_index = assoc_index(current_transition_table, all_transition_tables)
             if state in all_transition_tables[table_index][1]:
                 # non-halting program detected
-                return 'reject: never halts'
+                return '+DOESNOTHALT+'
             else:
                 all_transition_tables[table_index] = (all_transition_tables[table_index][0], all_transition_tables[table_index][1] + [state])
             

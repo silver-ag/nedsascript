@@ -1,0 +1,6 @@
+:start
+IF READ done {
+  GOTO SUCCESS
+}
+GOTO start
+:SUCCESS

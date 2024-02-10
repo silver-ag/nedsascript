@@ -1,0 +1,5 @@
+:a
+PUSH X
+PUSH Y
+PUSH Z
+GOTO a

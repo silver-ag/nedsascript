@@ -1,8 +1,8 @@
 from lark import Lark, Transformer, Visitor, Tree, Token, Discard
-from stackautomaton import NonErasingStackAutomaton, Transition
+from .stackautomaton import NonErasingStackAutomaton, Transition
 import itertools
 
-with open('nedsascript_grammar.lark', 'r') as grammar:
+with open('nedsascript/nedsascript_grammar.lark', 'r') as grammar:
     nedsascript_parser = Lark(grammar, start = 'program')
 
 def parse(code):
@@ -15,7 +15,19 @@ def construct_nedsa(code):
     variable_possibilities = list(itertools.product(*[list(range(v[1])) for v in variables.values()]))
     variable_names = list(variables.keys()) # tells us what order variable_possibilities is in
     variable_initialisations = [v[0] for v in variables.values()]
-    return parse_program(new_tree, alphabet, variable_possibilities, variable_names, variable_initialisations)
+    return Script(parse_program(new_tree, alphabet, variable_possibilities, variable_names, variable_initialisations))
+
+class Script:
+    def __init__(self, nedsa):
+        self.nedsa = nedsa
+    def run(self):
+        return self.clean(self.nedsa.run('+START+'))
+    def decide(self):
+        # same as run, but instead of running forever it'll return '+DOESNOTHALT+'
+        return self.clean(self.nedsa.run_with_transition_tables('+START+'))
+    def clean(self, string):
+        # '-' is a character that can't appear in user-specified labels that's used to seperate out variable data
+        return string.partition('-')[0]
 
 def state_endings(variable_possibilities):
     # make a list of all possible states in the form <statename>_<val1>_<val2> ... for values given as possible
@@ -23,7 +35,7 @@ def state_endings(variable_possibilities):
     for possibility in variable_possibilities:
         r.append('')
         for variable in possibility:
-            r[-1] += '_' + str(variable)
+            r[-1] += '-' + str(variable)
     return r
 
 class EndReplacer(Transformer):
@@ -68,7 +80,7 @@ class Preprocessor(Transformer):
         self.alphabet.add(items[0].value)
         return Tree(Token('RULE', 'push'), items)
     def ifread(self, items):
-        self.alphabet.add(items[2].value)
+        self.alphabet.add(items[0].value)
         return Tree(Token('RULE', 'ifread'), items)
     def number(self, items):
         return int(items[0].value)
@@ -77,7 +89,7 @@ def parse_program(program, alphabet, variable_possibilities, variable_names, var
     transitions = []
     initial_ending = ''
     for init in variable_initialisations:
-        initial_ending += '_' + str(init)
+        initial_ending += '-' + str(init)
     transitions.append(Transition('+START+', 'BLANK', program.children[0].children[0].children[0].value + initial_ending, {}))
     for i in range(len(program.children)):
         new_transitions, final_n = parse_labelled_block(program.children[i], alphabet, variable_possibilities, variable_names)
@@ -85,7 +97,7 @@ def parse_program(program, alphabet, variable_possibilities, variable_names, var
         if i + 1 < len(program.children):
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(program.children[i].children[0].children[0].value + ending + 'block' + str(final_n), symbol,
+                    transitions.append(Transition(program.children[i].children[0].children[0].value + ending + '-block' + str(final_n), symbol,
                                                   program.children[i+1].children[0].children[0].value + ending, {}))
     return NonErasingStackAutomaton(transitions)
         
@@ -95,7 +107,7 @@ def parse_labelled_block(block, alphabet, variable_possibilities, variable_names
     label = block.children[0].children[0].value
     for ending in state_endings(variable_possibilities):
         for symbol in alphabet:
-            transitions.append(Transition(label + ending, symbol, label + ending + 'block0', {}))
+            transitions.append(Transition(label + ending, symbol, label + ending + '-block0', {}))
     new_transitions, new_n = parse_codeblock(block.children[1:], label, alphabet, variable_possibilities, variable_names, 0)
     transitions += new_transitions
     return transitions, new_n
@@ -108,43 +120,43 @@ def parse_codeblock(block, label, alphabet, variable_possibilities, var_names, n
         elif statement.data == 'push':
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(n+1), {'push': statement.children[0].value}))
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(n+1), {'push': statement.children[0].value}))
             n += 1
         elif statement.data == 'move':
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(n+1),
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(n+1),
                                                {'move': {'DOWN':'left', 'UP':'right'}[statement.children[0].value]}))
             n += 1
         elif statement.data == 'halt':
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(n), {'halt': True}))
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(n), {'halt': True}))
         elif statement.data == 'goto':
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, statement.children[0].value + ending, {}))
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, statement.children[0].value + ending, {}))
         elif statement.data == 'ifread':
-            read_symbol = statement.children[1].value
+            read_symbol = statement.children[0].value
             for ending in state_endings(variable_possibilities):
-                transitions.append(Transition(label + ending + 'block' + str(n), read_symbol, label + ending + 'block' + str(n+1), {}))
-            new_transitions, new_n = parse_codeblock(statement.children[2].children, label, alphabet, var_possibilities, var_names, n + 1)
+                transitions.append(Transition(label + ending + '-block' + str(n), read_symbol, label + ending + '-block' + str(n+1), {}))
+            new_transitions, new_n = parse_codeblock(statement.children[1].children, label, alphabet, variable_possibilities, var_names, n + 1)
             transitions += new_transitions
             for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
                     if symbol != read_symbol:
-                        transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(new_n), {}))
+                        transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(new_n), {}))
             n = new_n
         elif statement.data == 'ifcomparison':
             constrained_possibilities = constrain_possibilities(variable_possibilities, var_names, statement.children[0], statement.children[1], statement.children[2])
             for ending in state_endings(constrained_possibilities):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(n+1), {}))
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(n+1), {}))
             new_transitions, new_n = parse_codeblock(statement.children[3].children, label, alphabet, constrained_possibilities, var_names, n + 1)
             transitions += new_transitions
             for ending in state_endings(set(variable_possibilities) - set(constrained_possibilities)):
                 for symbol in alphabet:
-                    transitions.append(Transition(label + ending + 'block' + str(n), symbol, label + ending + 'block' + str(new_n), {}))
+                    transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(new_n), {}))
     return transitions, n
 
 
@@ -177,5 +189,3 @@ class ExpressionEvaluator(Transformer):
 
 class ParseException(Exception):
     pass
-
-nedsa = construct_nedsa("VAR testvara = 2 / 3\nVAR testvarb = 2 / 10\ntestvara = testvarb + 1\n:loop\nPUSH hi\nIF 1 + 1 = testvarb { GOTO loop }")
