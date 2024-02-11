@@ -4,6 +4,7 @@ import sys
 if __name__ == "__main__":
     with open(sys.argv[2]) as file:
       nedsa = construct_nedsa(file.read())
+      #nedsa.nedsa.print_transitions()
     if sys.argv[1] == 'run':
       print(nedsa.run())
     elif sys.argv[1] == 'decide':

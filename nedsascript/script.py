@@ -40,6 +40,13 @@ def state_ending(possibility):
         r += '-' + str(variable)
     return r
 
+def remove_duplicates(lst):
+    r = []
+    for x in lst:
+        if x not in r:
+            r.append(x)
+    return r
+
 class EndReplacer(Transformer):
     # replace any initial codeblock with a labelledcodeblock with the label +FIRSTLABEL (note the + makes it not a valid user-declared label)
     # and replace any final label with a labelledcodeblock with an empty codeblock
@@ -166,31 +173,31 @@ def parse_codeblock(block, label, alphabet, variable_possibilities, var_names, v
                     variable_possibilities[i] = new_possibility
             for i in to_remove:
                 variable_possibilities[i] = None
-            variable_possibilities = list(filter(lambda x: x is not None, variable_possibilities)) # remove impossible values
+            variable_possibilities = remove_duplicates(list(filter(lambda x: x is not None, variable_possibilities))) # remove impossible values
             n += 1
         elif statement.data == 'ifread':
             read_symbol = statement.children[0].value
-            vps = list(variable_possibilities) # store because it's getting fucked up by something in the recursive call
             for ending in state_endings(variable_possibilities):
                 transitions.append(Transition(label + ending + '-block' + str(n), read_symbol, label + ending + '-block' + str(n+1), {}))
-            new_transitions, variable_possibilities, new_n = parse_codeblock(statement.children[1].children, label, alphabet, variable_possibilities, var_names, var_maxs, n + 1)
-            for ending in state_endings(vps):
+            new_transitions, new_variable_possibilities, new_n = parse_codeblock(statement.children[1].children, label, alphabet, list(variable_possibilities), var_names, var_maxs, n + 1)
+            for ending in state_endings(variable_possibilities):
                 for symbol in alphabet:
                     if symbol != read_symbol:
                         transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(new_n), {}))
             transitions += new_transitions
+            variable_possibilities += [possibility for possibility in new_variable_possibilities if possibility not in variable_possibilities]
             n = new_n
         elif statement.data == 'ifcomparison':
-            vps = list(variable_possibilities) # store because it's getting fucked up by something in the recursive call
-            constrained_possibilities = constrain_possibilities(variable_possibilities, var_names, statement.children[0], statement.children[1], statement.children[2])
+            constrained_possibilities = constrain_possibilities(list(variable_possibilities), var_names, statement.children[0], statement.children[1], statement.children[2])
             for ending in state_endings(constrained_possibilities):
                 for symbol in alphabet:
                     transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(n+1), {}))
-            new_transitions, variable_possibilities, new_n = parse_codeblock(statement.children[3].children, label, alphabet, constrained_possibilities, var_names, var_maxs, n + 1)
+            new_transitions, new_variable_possibilities, new_n = parse_codeblock(statement.children[3].children, label, alphabet, list(constrained_possibilities), var_names, var_maxs, n + 1)
             transitions += new_transitions
-            for ending in state_endings([possibility for possibility in vps if possibility not in constrained_possibilities]):
+            for ending in state_endings([possibility for possibility in variable_possibilities if possibility not in constrained_possibilities]):
                 for symbol in alphabet:
                     transitions.append(Transition(label + ending + '-block' + str(n), symbol, label + ending + '-block' + str(new_n), {}))
+            variable_possibilities += [possibility for possibility in new_variable_possibilities if possibility not in variable_possibilities]
             n = new_n
     return transitions, variable_possibilities, n
 
@@ -216,7 +223,7 @@ class ExpressionEvaluator(Transformer):
         if isinstance(items[0], Token) and items[0].type == 'NAME': # variable name
             return lambda variables: variables[self.variable_names.index(items[0])]
         elif len(items) == 3: # operation
-            operation = {'+': lambda a,b: a+b, '-': lambda a,b: a-b, '*': lambda a,b: a*b, '/': lambda a,b: a//b}[items[1].value]
+            operation = {'+': lambda a,b: a+b, '-': lambda a,b: a-b, '*': lambda a,b: a*b, '/': lambda a,b: a//b, '%': lambda a,b: a%b}[items[1].value]
             return lambda variables: operation(items[0](variables), items[2](variables))
         else: # in all other cases it's already been processed into a list of numbers
             return lambda variables: items[0]

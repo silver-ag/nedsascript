@@ -38,27 +38,23 @@ class NonErasingStackAutomaton:
         self.prune_states()
     def prune_states(self):
         # remove all unreachable states and transitions, so the transition tables won't be so large
-        l = len(self.transitions) + len(self.states)
-        states_to_remove = []
-        for state in self.states:
-            reachable = (state == '+START+')
-            for transition in self.transitions.values():
-                if transition.state_to == state:
-                    reachable = True
-            if not reachable:
-                states_to_remove.append(state)
-                transitions_to_remove = []
-                for transition in self.transitions.values():
-                    if transition.state_from == state:
-                        transitions_to_remove.append((state, transition.value_from))
-                for key in transitions_to_remove:
-                    self.transitions.pop(key)
-        for state in states_to_remove:
+        reachable = []
+        def mark_reachable(state):
+            reachable.append(state)
+            for symbol in self.alphabet:
+                if (state, symbol) in self.transitions and self.transitions[(state,symbol)].state_to not in reachable:
+                    mark_reachable(self.transitions[(state,symbol)].state_to)
+        mark_reachable('+START+')
+        unreachable = [state for state in self.states if state not in reachable]
+        for state in unreachable:
             self.states.remove(state)
-        if len(self.transitions) + len(self.states) == l:
-            return True
-        else:
-            return self.prune_states()
+            for symbol in self.alphabet:
+                if (state, symbol) in self.transitions:
+                    self.transitions.pop((state,symbol))
+    def print_transitions(self):
+        # debugging purposes
+        for t in self.transitions.values():
+            print(f"{t.value_from}: {t.state_from} -> {t.state_to} ({t.push}, {t.move})")
     def run(self, state):
         pointer = 0
         stack = []

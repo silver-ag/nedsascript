@@ -11,6 +11,10 @@ def test_startendlabel():
     assertfile('teststartendlabel.nedsa', 'SUCCESS')
 def test_move():
     assertfile('testmove.nedsa', 'SUCCESS')
+def test_if():
+    assertfile('testif.nedsa', 'SUCCESS')
+def test_rps():
+    assertfile('testrps.nedsa', '+DOESNOTHALT+')
 
 def assertfile(filename, result):
     with open('tests/' + filename, 'r') as src:

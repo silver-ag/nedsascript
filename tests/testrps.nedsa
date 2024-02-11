@@ -1,0 +1,74 @@
+PUSH bottom
+:gameloop
+VAR playerchoice = 1 / 3
+VAR enemychoice = 1 / 3
+
+GOTO getplayerchoice
+:gotplayerchoice
+GOTO getenemychoice
+:gotenemychoice
+
+IF playerchoice = enemychoice {
+  PUSH draw
+  GOTO gameloop
+}
+IF playerchoice - 1 = enemychoice {
+  PUSH win
+  GOTO gameloop
+}
+IF playerchoice = 1 { IF enemychoice = 3 { // special case, we should really add modulo arithmetic to the language
+  PUSH win
+  GOTO gameloop
+}}
+HALT lose
+
+:getplayerchoice
+MOVE DOWN
+IF READ win {
+  playerchoice = 2
+}
+IF READ draw {
+  playerchoice = 2
+}
+IF READ bottom {
+  playerchoice = 1
+}
+MOVE UP
+GOTO gotplayerchoice
+:getenemychoice
+// cycles r, p, p, r, p, p ...
+GOTO getroundmodthree
+:gotroundmodthree
+IF roundmodthree = 0 {
+  enemychoice = 1
+  GOTO gotenemychoice
+}
+enemychoice = 2
+GOTO gotenemychoice
+
+:getroundmodthree
+VAR roundmodthree = 0 / 2
+MOVE DOWN
+IF READ bottom {
+  GOTO finishedgettinground
+}
+IF roundmodthree = 2 {
+  roundmodthree = 0
+  GOTO skipincrement
+}
+IF roundmodthree != 2 {
+  roundmodthree = roundmodthree + 1
+}
+:skipincrement
+GOTO getroundmodthree
+:finishedgettinground
+GOTO returntopofstack
+:returnedtopofstack
+GOTO gotroundmodthree
+
+:returntopofstack
+IF READ BLANK {
+  GOTO returnedtopofstack
+}
+MOVE UP
+GOTO returntopofstack

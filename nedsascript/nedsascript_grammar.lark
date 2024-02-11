@@ -7,7 +7,7 @@ WSORCOMMENT : WS | (_COMMENT "\n")
 NAME : /[a-zA-Z_]+/
 NUMBER : /[0-9]+/
 COMPARISON : "=" | ">" | "<" | ">=" | "<=" | "!="
-OPERATOR : "+" | "-" | "*" | "/"
+OPERATOR : "+" | "-" | "*" | "/" | "%"
 DIRECTION: "UP" | "DOWN"
 
 // note the explicit option for comments at the end, because lark doesn't support $ in the definition of _COMMENT

@@ -1,0 +1,28 @@
+IF 1 = 2 {
+  GOTO FAIL
+}
+IF 2 = 3 {
+  GOTO FAIL
+}
+IF READ nonexistant {
+  GOTO FAIL
+}
+IF READ somethingelse {
+  GOTO FAIL
+}
+IF 3 = 4 {
+  GOTO FAIL
+}
+IF READ BLANK {
+  IF 4 = 5 {
+    GOTO FAIL
+  }
+  IF 1 = 1 {
+    IF READ BLANK {
+      GOTO SUCCESS
+    }
+  }
+}
+:FAIL
+HALT FAIL
+:SUCCESS
