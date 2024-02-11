@@ -35,6 +35,30 @@ class NonErasingStackAutomaton:
             self.states.add(transition.state_from)
             self.states.add(transition.state_to)
             self.alphabet.add(transition.value_from)
+        self.prune_states()
+    def prune_states(self):
+        # remove all unreachable states and transitions, so the transition tables won't be so large
+        l = len(self.transitions) + len(self.states)
+        states_to_remove = []
+        for state in self.states:
+            reachable = (state == '+START+')
+            for transition in self.transitions.values():
+                if transition.state_to == state:
+                    reachable = True
+            if not reachable:
+                states_to_remove.append(state)
+                transitions_to_remove = []
+                for transition in self.transitions.values():
+                    if transition.state_from == state:
+                        transitions_to_remove.append((state, transition.value_from))
+                for key in transitions_to_remove:
+                    self.transitions.pop(key)
+        for state in states_to_remove:
+            self.states.remove(state)
+        if len(self.transitions) + len(self.states) == l:
+            return True
+        else:
+            return self.prune_states()
     def run(self, state):
         pointer = 0
         stack = []
